@@ -1,0 +1,8 @@
+# YOLO Dataset Configuration
+path: C:\smet4ik\backend\yolo_dataset  # dataset root dir
+train: images/train  # train images
+val: images/val  # val images
+
+# Classes
+names:
+  0: wall

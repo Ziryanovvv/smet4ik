@@ -1,0 +1,41 @@
+{
+  "project_id": "8fa56f32",
+  "original_filename": "test.pdf",
+  "pdf_path": "uploaded_pdfs\\8fa56f32\\test.pdf",
+  "pages": [
+    {
+      "page_num": 1,
+      "image_path": "page_001.jpg",
+      "image_url": "/project/8fa56f32/page/1/image",
+      "ocr_text_preview": "-- 6583 мм —\n\n| A\n| | :\n=\ncon)\n10\nw\n| y\n\n3500 мм —\n\n=\n\n=\n\na\n\nwo\n\ncos)\n\nw\n\n[ ] М\n\nПлан возведения перегородок",
+      "ocr_measurements": [
+        {
+          "value_mm": 6583.0,
+          "text": "6583 мм",
+          "type": "linear"
+        },
+        {
+          "value_mm": 3500.0,
+          "text": "3500 мм",
+          "type": "linear"
+        }
+      ],
+      "ocr_keywords": [],
+      "has_architectural_data": true
+    }
+  ],
+  "total_pages": 1,
+  "ocr_results": [
+    {
+      "page_num": 1,
+      "measurements_count": 2,
+      "keywords": [],
+      "has_architectural_data": true,
+      "saved_to_db": true
+    }
+  ],
+  "status": "uploaded",
+  "converter": "PyMuPDF (fitz)",
+  "ocr_processed": true,
+  "ocr_saved_to_db": true
+}

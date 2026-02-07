@@ -1,0 +1,46 @@
+{
+  "project_id": "1856415c",
+  "page_num": 1,
+  "image_dimensions": {
+    "width_px": 1754,
+    "height_px": 1241
+  },
+  "objects": [
+    {
+      "type": "wall",
+      "points": [
+        {
+          "x": 457.67987060546875,
+          "y": 217.937255859375
+        },
+        {
+          "x": 1325.162109375,
+          "y": 217.937255859375
+        },
+        {
+          "x": 1325.162109375,
+          "y": 882.5674438476562
+        },
+        {
+          "x": 457.67987060546875,
+          "y": 882.5674438476562
+        }
+      ],
+      "confidence": 0.6128502130508423,
+      "dimensions": {
+        "width_px": 867.4822387695312,
+        "height_px": 664.6301879882812,
+        "aspect_ratio": 1.3052103519439697
+      },
+      "center": {
+        "x": 891.4210205078125,
+        "y": 550.2523193359375
+      }
+    }
+  ],
+  "total_objects": 1,
+  "detection_method": "YOLO+Geometry Hybrid",
+  "created_at": "2026-02-03T21:23:16",
+  "model_version": "v1.0-hybrid",
+  "success": true
+}

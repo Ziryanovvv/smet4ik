@@ -1,0 +1,47 @@
+{
+  "project_id": "cd5200a0",
+  "page_num": 3,
+  "image_dimensions": {
+    "width_px": 2481,
+    "height_px": 1754
+  },
+  "objects": [
+    {
+      "type": "wall",
+      "points": [
+        {
+          "x": 1001.3929443359375,
+          "y": 799.708984375
+        },
+        {
+          "x": 1640.4110107421875,
+          "y": 799.708984375
+        },
+        {
+          "x": 1640.4110107421875,
+          "y": 1400.6490478515625
+        },
+        {
+          "x": 1001.3929443359375,
+          "y": 1400.6490478515625
+        }
+      ],
+      "confidence": 0.38649938106536863,
+      "dimensions": {
+        "width_px": 639.01806640625,
+        "height_px": 600.9400634765625,
+        "aspect_ratio": 1.063364028930664
+      },
+      "center": {
+        "x": 1320.9019775390625,
+        "y": 1100.178955078125
+      }
+    }
+  ],
+  "total_objects": 1,
+  "detection_method": "YOLO+Geometry Hybrid",
+  "created_at": "2026-02-04T00:20:16",
+  "model_version": "v1.0-hybrid",
+  "success": true,
+  "image_path": "C:\\smet4ik\\backend\\processed_images\\cd5200a0\\page_003.jpg"
+}

@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smet4ik AI Trainer - Разметка чертежей с исправленным зумом</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 40px;
+            border-bottom: 3px solid rgba(255,255,255,0.2);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header h1 i {
+            font-size: 32px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .workspace {
+            display: flex;
+            min-height: 850px;
+        }
+        
+        /* Левая панель - чертеж */
+        .drawing-panel {
+            flex: 4;
+            background: #1a1a2e;
+            position: relative;
+            overflow: hidden;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .drawing-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: auto;
+            border-radius: 10px;
+            background: #2d2d44;
+        }
+        
+        .drawing-controls {
+            width: 100%;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+        }
+        
+        .control-group label {
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .control-group input, .control-group select {
+            background: rgba(255,255,255,0.95);
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .control-group button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-top: 5px;
+        }
+        
+        .control-group button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        #drawingCanvas {
+            display: block;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            cursor: crosshair;
+            transform-origin: 0 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .zoom-btn:hover {
+            background: #45a049;
+            transform: scale(1.1);
+        }
+        
+        .zoom-display {
+            color: white;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-family: monospace;
+        }
+        
+        .coordinates-display {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 100;
+        }
+        
+        .pan-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 193, 7, 0.9);
+            color: #333;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 100;
+            display: none;
+        }
+        
+        /* Калибровочная панель */
+        .calibration-panel {
+            width: 100%;
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #FFC107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .calibration-panel h4 {
+            color: #FFC107;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .calibration-steps {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .calibration-step {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        /* Правая панель - инструменты */
+        .tools-panel {
+            flex: 1.5;
+            background: #f8f9fa;
+            padding: 25px;
+            border-left: 3px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+        }
+        
+        .section h3 i {
+            color: #667eea;
+        }
+        
+        .tool-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .tool-btn {
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 12px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+        }
+        
+        .tool-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .tool-btn.active {
+            border-color: #4CAF50;
+            background: #f0f9f0;
+        }
+        
+        .tool-btn i {
+            font-size: 18px;
+        }
+        
+        .wall-btn i { color: #FF5722; }
+        .window-btn i { color: #2196F3; }
+        .door-btn i { color: #795548; }
+        .measure-btn i { color: #9C27B0; }
+        
+        .objects-list {
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        
+        .object-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 6px 0;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .object-item.wall { border-left-color: #FF5722; }
+        .object-item.window { border-left-color: #2196F3; }
+        .object-item.door { border-left-color: #795548; }
+        
+        .object-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .delete-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .delete-btn:hover {
+            background: #cc0000;
+        }
+        
+        .scale-info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .save-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .calibrate-btn {
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            color: white;
+        }
+        
+        .calibrate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+        }
+        
+        .clear-btn {
+            background: linear-gradient(135deg, #FF5722 0%, #D84315 100%);
+            color: white;
+        }
+        
+        .clear-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
+        }
+        
+        .status-bar {
+            background: #333;
+            color: white;
+            padding: 12px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        #statusMessage {
+            font-size: 13px;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .hotkeys {
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        
+        .hotkeys h4 {
+            margin-bottom: 8px;
+            color: #2E7D32;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i class="fas fa-ruler-combined"></i>
+                Smet4ik AI Trainer - Разметка чертежей с исправленным зумом
+            </h1>
+            <p>Теперь координаты курсора и разметки совпадают при любом зуме!</p>
+        </div>
+        
+        <div class="instructions">
+            <strong>🎯 Исправленный зум:</strong>
+            <ol>
+                <li>Колесико мыши - увеличение/уменьшение (работает корректно!)</li>
+                <li>Правая кнопка мыши + перетаскивание - перемещение по чертежу</li>
+                <li>Кнопки + и - на панели - изменение масштаба</li>
+                <li>Кнопка "Домой" - сброс зума и позиции</li>
+                <li>Кнопка "Вместить" - автоматическое масштабирование</li>
+            </ol>
+            <p style="color: green; margin-top: 10px; font-weight: bold;">
+                ✓ Теперь точки разметки ставятся точно под курсором при любом уровне зума!
+            </p>
+        </div>
+        
+        <div class="hotkeys">
+            <h4>📋 Горячие клавиши:</h4>
+            <div>W - Стена | O - Окно | D - Дверь | M - Измерить | +/- - Зум | Прав.кнопка - Перемещение | Home - Сброс</div>
+        </div>
+        
+        <div class="workspace">
+            <!-- Левая панель - чертеж -->
+            <div class="drawing-panel">
+                <div class="drawing-controls">
+                    <div class="control-group">
+                        <label><i class="fas fa-project-diagram"></i> Project ID:</label>
+                        <input type="text" id="projectId" value="1856415c">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label><i class="fas fa-file-alt"></i> Страница:</label>
+                        <input type="number" id="pageNum" value="1" min="1">
+                    </div>
+                    
+                    <div class="control-group">
+                        <button onclick="loadFloorPlan()">
+                            <i class="fas fa-sync-alt"></i> Загрузить чертеж
+                        </button>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label><i class="fas fa-ruler"></i> Текущий масштаб:</label>
+                        <input type="text" id="currentScale" value="Не задан" readonly style="background: #e0e0e0;">
+                    </div>
+                    
+                    <div class="control-group">
+                        <button onclick="toggleCalibration()" class="calibrate-btn">
+                            <i class="fas fa-ruler-combined"></i> Калибровать масштаб
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Панель калибровки -->
+                <div class="calibration-panel" id="calibrationPanel">
+                    <h4><i class="fas fa-sliders-h"></i> Калибровка масштаба</h4>
+                    <div class="calibration-steps">
+                        <div class="calibration-step">
+                            <label>1. Кликните на начало отрезка с известным размером</label>
+                            <input type="text" id="calPoint1" value="Не выбрана" readonly style="background: #fff3cd;">
+                        </div>
+                        <div class="calibration-step">
+                            <label>2. Кликните на конец отрезка</label>
+                            <input type="text" id="calPoint2" value="Не выбрана" readonly style="background: #fff3cd;">
+                        </div>
+                        <div class="calibration-step">
+                            <label>3. Введите реальную длину (метры)</label>
+                            <input type="number" id="realLength" step="0.01" min="0.1" max="100" value="3.5" placeholder="например: 3.5">
+                            <button onclick="applyCalibration()"><i class="fas fa-check"></i> Применить калибровку</button>
+                        </div>
+                        <div class="calibration-step">
+                            <label>4. Результат</label>
+                            <input type="text" id="calResult" value="Ожидание..." readonly style="background: #e8f5e9;">
+                            <button onclick="cancelCalibration()"><i class="fas fa-times"></i> Отмена</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="drawing-container" id="drawingContainer">
+                    <canvas id="drawingCanvas"></canvas>
+                    
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoomOut()" title="Уменьшить (Колесо вниз)">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <div class="zoom-display" id="zoomDisplay">100%</div>
+                        <button class="zoom-btn" onclick="zoomIn()" title="Увеличить (Колесо вверх)">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button class="zoom-btn" onclick="resetZoom()" title="Сбросить зум (Home)">
+                            <i class="fas fa-home"></i>
+                        </button>
+                        <button class="zoom-btn" onclick="fitToScreen()" title="Вместить в экран">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="coordinates-display" id="coordinates">
+                        Пиксели: (0, 0) | Метры: (0.00, 0.00) | Зум: 100%
+                    </div>
+                    
+                    <div class="pan-hint" id="panHint">
+                        ⚡ Удерживайте правую кнопку мыши для перемещения
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Правая панель - инструменты -->
+            <div class="tools-panel">
+                <div class="section">
+                    <h3><i class="fas fa-tools"></i> Инструменты</h3>
+                    <div class="tool-buttons">
+                        <div class="tool-btn wall-btn active" onclick="selectTool('wall')" title="Стена (W)">
+                            <i class="fas fa-border-style"></i>
+                            <span>Стена</span>
+                        </div>
+                        <div class="tool-btn window-btn" onclick="selectTool('window')" title="Окно (O)">
+                            <i class="fas fa-square"></i>
+                            <span>Окно</span>
+                        </div>
+                        <div class="tool-btn door-btn" onclick="selectTool('door')" title="Дверь (D)">
+                            <i class="fas fa-door-closed"></i>
+                            <span>Дверь</span>
+                        </div>
+                        <div class="tool-btn measure-btn" onclick="selectTool('measure')" title="Измерить (M)">
+                            <i class="fas fa-ruler"></i>
+                            <span>Измерить</span>
+                        </div>
+                        <div class="tool-btn" onclick="selectTool('select')" title="Выбор">
+                            <i class="fas fa-mouse-pointer"></i>
+                            <span>Выбор</span>
+                        </div>
+                        <div class="tool-btn" onclick="toggleGrid()" title="Сетка">
+                            <i class="fas fa-th"></i>
+                            <span>Сетка</span>
+                        </div>
+                        <div class="tool-btn" onclick="testCoordinatesMode()" title="Тест координат">
+                            <i class="fas fa-crosshairs"></i>
+                            <span>Тест координат</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <button onclick="completeCurrentObject()" style="width: 100%; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            <i class="fas fa-check-circle"></i> Завершить объект (Enter)
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3><i class="fas fa-ruler-horizontal"></i> Масштаб и зум</h3>
+                    <div class="scale-info">
+                        <div><strong>Масштаб чертежа:</strong> <span id="scaleRatio">1 пиксель = ? метров</span></div>
+                        <div><strong>Текущий зум:</strong> <span id="currentZoom">100%</span></div>
+                        <div><strong>Позиция камеры:</strong> <span id="viewportPosition">X: 0, Y: 0</span></div>
+                        <div style="margin-top: 10px;">
+                            <button onclick="zoomIn()" style="padding: 5px 10px; margin-right: 5px;"><i class="fas fa-plus"></i></button>
+                            <button onclick="zoomOut()" style="padding: 5px 10px; margin-right: 5px;"><i class="fas fa-minus"></i></button>
+                            <button onclick="resetZoom()" style="padding: 5px 10px;"><i class="fas fa-sync-alt"></i> Сброс</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3><i class="fas fa-layer-group"></i> Объекты</h3>
+                    <div class="objects-list" id="objectsList">
+                        <!-- Объекты будут добавляться здесь -->
+                    </div>
+                    <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+                        Всего: <span id="totalObjects">0</span> объектов
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3><i class="fas fa-chart-bar"></i> Статистика (в метрах)</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="number" id="wallsCount">0</div>
+                            <div class="label">Стен</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="number" id="windowsCount">0</div>
+                            <div class="label">Окон</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="number" id="doorsCount">0</div>
+                            <div class="label">Дверей</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="number" id="totalLength">0.0</div>
+                            <div class="label">Метров стен</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3><i class="fas fa-database"></i> Действия</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn save-btn" onclick="saveMarkup()">
+                            <i class="fas fa-save"></i> Сохранить разметку (в БД + файл)
+                        </button>
+                        <button class="action-btn calibrate-btn" onclick="toggleCalibration()">
+                            <i class="fas fa-ruler-combined"></i> Калибровать масштаб
+                        </button>
+                        <button class="action-btn clear-btn" onclick="clearAll()">
+                            <i class="fas fa-trash-alt"></i> Очистить всё
+                        </button>
+                        <button class="action-btn" onclick="exportToJSON()" style="background: #607d8b; color: white;">
+                            <i class="fas fa-file-export"></i> Только экспорт в JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <div id="statusMessage">Готов к работе. Загрузите чертеж. Используйте колесико мыши для зума.</div>
+            <div>
+                <span id="currentTool">Инструмент: Стена</span> | 
+                <span id="pointsCount">Точек: 0</span> |
+                <span id="calibrationStatus">Масштаб: Не задан</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+        let canvas = document.getElementById('drawingCanvas');
+        let ctx = canvas.getContext('2d');
+        let container = document.getElementById('drawingContainer');
+        let currentImage = null;
+        
+        // Система зума и панорамирования
+        let zoom = 1.0;
+        let minZoom = 0.1;
+        let maxZoom = 10.0;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        
+        // Система координат и масштаба
+        let scale = 1.0; // Пиксели к метрам: 1 пиксель = scale метров
+        let calibrationPoints = [];
+        let isCalibrating = false;
+        let showGrid = true;
+        let testMode = false;
+        
+        // Инструменты и объекты
+        let currentTool = 'wall';
+        let currentPoints = [];
+        let markedObjects = [];
+        let measurements = [];
+        let selectedObject = null;
+        let lastX = 0;
+        let lastY = 0;
+        
+        // ========== ИСПРАВЛЕННЫЕ ФУНКЦИИ КООРДИНАТ ==========
+        
+        function getCanvasCoordinates(e) {
+            // Получаем координаты клика относительно canvas
+            const rect = canvas.getBoundingClientRect();
+            
+            // Координаты мыши относительно canvas
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Преобразуем в координаты чертежа с учетом зума и смещения
+            const canvasX = (mouseX - offsetX) / zoom;
+            const canvasY = (mouseY - offsetY) / zoom;
+            
+            return { 
+                x: canvasX, 
+                y: canvasY,
+                screenX: mouseX,
+                screenY: mouseY
+            };
+        }
+        
+        function getScreenCoordinates(canvasX, canvasY) {
+            // Преобразование координат чертежа в экранные координаты
+            return {
+                x: canvasX * zoom + offsetX,
+                y: canvasY * zoom + offsetY
+            };
+        }
+        
+        // ========== ФУНКЦИИ ЗУМА И ПАНОРАМИРОВАНИЯ ==========
+        
+        function applyTransform() {
+            // Применяем текущие трансформации
+            ctx.setTransform(zoom, 0, 0, zoom, offsetX, offsetY);
+            
+            // Обновляем отображение
+            document.getElementById('zoomDisplay').textContent = `${Math.round(zoom * 100)}%`;
+            document.getElementById('currentZoom').textContent = `${Math.round(zoom * 100)}%`;
+            document.getElementById('viewportPosition').textContent = `X: ${Math.round(offsetX)}, Y: ${Math.round(offsetY)}`;
+        }
+        
+        function zoomIn(factor = 1.2) {
+            const oldZoom = zoom;
+            const newZoom = Math.min(maxZoom, zoom * factor);
+            
+            // Получаем центр контейнера для центрирования зума
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            // Корректируем смещение
+            offsetX = centerX - (centerX - offsetX) * (newZoom / oldZoom);
+            offsetY = centerY - (centerY - offsetY) * (newZoom / oldZoom);
+            
+            zoom = newZoom;
+            applyTransform();
+            draw();
+            showStatus(`Увеличение: ${Math.round(zoom * 100)}%`, 'info');
+        }
+        
+        function zoomOut(factor = 1.2) {
+            const oldZoom = zoom;
+            const newZoom = Math.max(minZoom, zoom / factor);
+            
+            // Получаем центр контейнера для центрирования зума
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            // Корректируем смещение
+            offsetX = centerX - (centerX - offsetX) * (newZoom / oldZoom);
+            offsetY = centerY - (centerY - offsetY) * (newZoom / oldZoom);
+            
+            zoom = newZoom;
+            applyTransform();
+            draw();
+            showStatus(`Уменьшение: ${Math.round(zoom * 100)}%`, 'info');
+        }
+        
+        function resetZoom() {
+            zoom = 1.0;
+            offsetX = 0;
+            offsetY = 0;
+            applyTransform();
+            draw();
+            showStatus('Зум сброшен', 'info');
+        }
+        
+        function fitToScreen() {
+            if (!currentImage || !canvas.width || !canvas.height) return;
+            
+            const containerRect = container.getBoundingClientRect();
+            const containerWidth = containerRect.width - 40;
+            const containerHeight = containerRect.height - 40;
+            
+            const scaleX = containerWidth / canvas.width;
+            const scaleY = containerHeight / canvas.height;
+            const newZoom = Math.min(scaleX, scaleY) * 0.95; // 95% чтобы были отступы
+            
+            zoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
+            
+            // Центрируем
+            offsetX = (containerWidth - canvas.width * zoom) / 2;
+            offsetY = (containerHeight - canvas.height * zoom) / 2;
+            
+            applyTransform();
+            draw();
+            showStatus(`Вмещено в экран: ${Math.round(zoom * 100)}%`, 'info');
+        }
+        
+        // ========== ФУНКЦИИ ЗАГРУЗКИ И ОТРИСОВКИ ==========
+        
+        async function loadFloorPlan() {
+            const projectId = document.getElementById('projectId').value;
+            const pageNum = document.getElementById('pageNum').value;
+            
+            showStatus(`Загрузка чертежа проекта ${projectId}, страница ${pageNum}...`, 'info');
+            
+            try {
+                const response = await fetch(`/project/${projectId}/page/${pageNum}/image`);
+                if (!response.ok) throw new Error('Не удалось загрузить изображение');
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                currentImage = new Image();
+                currentImage.onload = function() {
+                    // Устанавливаем размер canvas равным размеру изображения
+                    canvas.width = currentImage.width;
+                    canvas.height = currentImage.height;
+                    
+                    applyTransform();
+                    draw();
+                    showStatus(`Чертеж загружен: ${canvas.width}×${canvas.height} пикселей`, 'success');
+                    
+                    // Автоматически вмещаем в экран
+                    setTimeout(fitToScreen, 100);
+                    
+                    // Автоматическая калибровка
+                    autoEstimateScale();
+                };
+                
+                currentImage.onerror = function() {
+                    showStatus('Ошибка загрузки изображения', 'error');
+                };
+                
+                currentImage.src = url;
+                
+            } catch (error) {
+                showStatus(`Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        function draw() {
+            // Очищаем canvas
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Применяем трансформации
+            applyTransform();
+            
+            // Рисуем сетку
+            if (showGrid) {
+                drawGrid();
+            }
+            
+            // Рисуем изображение
+            if (currentImage) {
+                ctx.drawImage(currentImage, 0, 0);
+            } else {
+                // Заглушка
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#666';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Загрузите чертеж для разметки', canvas.width/2, canvas.height/2);
+            }
+            
+            // Рисуем все остальное
+            drawMeasurements();
+            drawMarkedObjects();
+            drawCurrentPoints();
+            
+            if (isCalibrating) {
+                drawCalibrationPoints();
+            }
+        }
+        
+        function drawGrid() {
+            const gridSize = 50; // Размер ячейки сетки
+            
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 1 / zoom;
+            
+            // Только если сетка достаточно крупная
+            if (gridSize * zoom < 10) return;
+            
+            // Вертикальные линии
+            for (let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Горизонтальные линии
+            for (let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+        
+        function drawCalibrationPoints() {
+            calibrationPoints.forEach((point, index) => {
+                ctx.fillStyle = '#FF9800';
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(index + 1, point.x - 4, point.y + 4);
+                
+                // Линия между точками
+                if (calibrationPoints.length === 2) {
+                    const p1 = calibrationPoints[0];
+                    const p2 = calibrationPoints[1];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const length = Math.sqrt(dx*dx + dy*dy);
+                    
+                    ctx.strokeStyle = '#FF9800';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    // Текст с длиной
+                    const midX = (p1.x + p2.x) / 2;
+                    const midY = (p1.y + p2.y) / 2;
+                    
+                    ctx.fillStyle = '#FF9800';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${length.toFixed(1)}px`, midX, midY - 10);
+                    ctx.textAlign = 'left';
+                }
+            });
+        }
+        
+        function drawMeasurements() {
+            measurements.forEach(m => {
+                ctx.strokeStyle = '#9C27B0';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(m.x1, m.y1);
+                ctx.lineTo(m.x2, m.y2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Точки
+                ctx.fillStyle = '#9C27B0';
+                ctx.beginPath();
+                ctx.arc(m.x1, m.y1, 5, 0, Math.PI * 2);
+                ctx.arc(m.x2, m.y2, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Текст
+                const midX = (m.x1 + m.x2) / 2;
+                const midY = (m.y1 + m.y2) / 2;
+                
+                ctx.fillStyle = '#7B1FA2';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${m.lengthMeters.toFixed(2)} м`, midX, midY - 10);
+                ctx.textAlign = 'left';
+            });
+        }
+        
+        function drawMarkedObjects() {
+            markedObjects.forEach((obj, index) => {
+                let color, lineWidth;
+                switch(obj.type) {
+                    case 'wall':
+                        color = '#FF5722';
+                        lineWidth = 4;
+                        break;
+                    case 'window':
+                        color = '#2196F3';
+                        lineWidth = 3;
+                        ctx.setLineDash([5, 5]);
+                        break;
+                    case 'door':
+                        color = '#795548';
+                        lineWidth = 3;
+                        ctx.setLineDash([3, 3]);
+                        break;
+                    default:
+                        color = '#666';
+                        lineWidth = 2;
+                }
+                
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.fillStyle = color;
+                
+                // Линии
+                if (obj.points.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+                    for (let i = 1; i < obj.points.length; i++) {
+                        ctx.lineTo(obj.points[i].x, obj.points[i].y);
+                    }
+                    if (obj.type === 'wall' && obj.points.length > 2) {
+                        ctx.closePath();
+                    }
+                    ctx.stroke();
+                }
+                
+                ctx.setLineDash([]);
+                
+                // Точки
+                obj.points.forEach(point => {
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                // Размеры (только при достаточном зуме)
+                if (zoom > 0.5) {
+                    for (let i = 0; i < obj.points.length - 1; i++) {
+                        const p1 = obj.points[i];
+                        const p2 = obj.points[i + 1];
+                        const lengthPx = distance(p1, p2);
+                        const lengthMeters = lengthPx * scale;
+                        
+                        if (lengthMeters > 0.1) {
+                            const midX = (p1.x + p2.x) / 2;
+                            const midY = (p1.y + p2.y) / 2;
+                            
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                            ctx.fillRect(midX - 25, midY - 15, 50, 20);
+                            
+                            ctx.fillStyle = color;
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(`${lengthMeters.toFixed(2)} м`, midX, midY);
+                            ctx.textAlign = 'left';
+                        }
+                    }
+                }
+            });
+        }
+        
+        function drawCurrentPoints() {
+            if (currentPoints.length === 0) return;
+            
+            let color;
+            switch(currentTool) {
+                case 'wall': color = '#FF5722'; break;
+                case 'window': color = '#2196F3'; break;
+                case 'door': color = '#795548'; break;
+                case 'measure': color = '#9C27B0'; break;
+                default: color = '#4CAF50';
+            }
+            
+            // Линии между точками
+            if (currentPoints.length > 1) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                
+                ctx.beginPath();
+                ctx.moveTo(currentPoints[0].x, currentPoints[0].y);
+                for (let i = 1; i < currentPoints.length; i++) {
+                    ctx.lineTo(currentPoints[i].x, currentPoints[i].y);
+                }
+                
+                // Линия к текущей позиции мыши
+                if (lastX !== undefined && lastY !== undefined) {
+                    ctx.lineTo(lastX, lastY);
+                }
+                
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // Точки
+            currentPoints.forEach((point, index) => {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Номер точки
+                if (zoom > 0.5) {
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.fillText(index + 1, point.x - 4, point.y + 4);
+                }
+            });
+        }
+        
+        // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
+        
+        // Обработчик колесика мыши
+        container.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const oldZoom = zoom;
+            
+            if (e.deltaY < 0) {
+                // Увеличение
+                zoom = Math.min(maxZoom, zoom * 1.1);
+            } else {
+                // Уменьшение
+                zoom = Math.max(minZoom, zoom * 0.9);
+            }
+            
+            // Корректируем смещение для масштабирования относительно мыши
+            offsetX = mouseX - (mouseX - offsetX) * (zoom / oldZoom);
+            offsetY = mouseY - (mouseY - offsetY) * (zoom / oldZoom);
+            
+            applyTransform();
+            draw();
+        }, { passive: false });
+        
+        // Обработчики панорамирования
+        container.addEventListener('mousedown', function(e) {
+            if (e.button === 2) { // Правая кнопка
+                e.preventDefault();
+                isPanning = true;
+                panStartX = e.clientX - offsetX;
+                panStartY = e.clientY - offsetY;
+                container.style.cursor = 'grabbing';
+                document.getElementById('panHint').style.display = 'block';
+            }
+        });
+        
+        container.addEventListener('mousemove', function(e) {
+            // Обновляем координаты для отображения
+            const coords = getCanvasCoordinates(e);
+            lastX = coords.x;
+            lastY = coords.y;
+            updateCoordinatesDisplay(lastX, lastY);
+            
+            // Перерисовываем если нужно
+            if (currentPoints.length > 0 || isCalibrating || testMode) {
+                draw();
+            }
+            
+            // Панорамирование
+            if (isPanning) {
+                offsetX = e.clientX - panStartX;
+                offsetY = e.clientY - panStartY;
+                applyTransform();
+                draw();
+            }
+        });
+        
+        container.addEventListener('mouseup', function(e) {
+            if (e.button === 2) {
+                isPanning = false;
+                container.style.cursor = 'crosshair';
+                document.getElementById('panHint').style.display = 'none';
+            }
+        });
+        
+        // Запрещаем контекстное меню
+        container.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Обработчик кликов
+        canvas.addEventListener('click', function(e) {
+            const coords = getCanvasCoordinates(e);
+            const x = coords.x;
+            const y = coords.y;
+            
+            lastX = x;
+            lastY = y;
+            updateCoordinatesDisplay(x, y);
+            
+            if (testMode) {
+                drawTestCross(x, y);
+                return;
+            }
+            
+            if (isCalibrating) {
+                handleCalibrationClick(x, y);
+                return;
+            }
+            
+            if (currentTool === 'select') {
+                selectObjectAt(x, y);
+                return;
+            }
+            
+            if (currentTool === 'measure') {
+                currentPoints.push({x, y});
+                if (currentPoints.length === 2) {
+                    const lengthPx = distance(currentPoints[0], currentPoints[1]);
+                    const lengthMeters = lengthPx * scale;
+                    
+                    measurements.push({
+                        x1: currentPoints[0].x, y1: currentPoints[0].y,
+                        x2: currentPoints[1].x, y2: currentPoints[1].y,
+                        lengthMeters,
+                        pixelLength: lengthPx
+                    });
+                    
+                    showStatus(`Измерено: ${lengthMeters.toFixed(2)} м`, 'success');
+                    currentPoints = [];
+                }
+            } else {
+                currentPoints.push({x, y});
+                
+                if ((currentTool === 'window' || currentTool === 'door') && currentPoints.length >= 2) {
+                    completeCurrentObject();
+                }
+            }
+            
+            document.getElementById('pointsCount').textContent = `Точек: ${currentPoints.length}`;
+            draw();
+        });
+        
+        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+        
+        function updateCoordinatesDisplay(x, y) {
+            const metersX = (x * scale).toFixed(2);
+            const metersY = (y * scale).toFixed(2);
+            
+            document.getElementById('coordinates').textContent = 
+                `Пиксели: (${x.toFixed(0)}, ${y.toFixed(0)}) | Метры: (${metersX}, ${metersY}) | Зум: ${Math.round(zoom * 100)}%`;
+        }
+        
+        function distance(p1, p2) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            return Math.sqrt(dx*dx + dy*dy);
+        }
+        
+        function getToolName(tool) {
+            const names = {
+                'wall': 'Стена',
+                'window': 'Окно', 
+                'door': 'Дверь',
+                'measure': 'Измерить',
+                'select': 'Выбор'
+            };
+            return names[tool] || tool;
+        }
+        
+        function selectTool(tool) {
+            currentTool = tool;
+            
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const toolMap = {
+                'wall': '.wall-btn',
+                'window': '.window-btn',
+                'door': '.door-btn',
+                'measure': '.measure-btn',
+                'select': '.tool-btn:nth-child(5)'
+            };
+            
+            if (toolMap[tool]) {
+                document.querySelector(toolMap[tool]).classList.add('active');
+            }
+            
+            document.getElementById('currentTool').textContent = `Инструмент: ${getToolName(tool)}`;
+            
+            if (currentPoints.length > 0 && tool !== 'measure') {
+                currentPoints = [];
+                document.getElementById('pointsCount').textContent = `Точек: 0`;
+                draw();
+            }
+            
+            showStatus(`Выбран инструмент: ${getToolName(tool)}`, 'info');
+        }
+        
+        function completeCurrentObject() {
+            if (currentPoints.length < 2) {
+                showStatus('Для завершения нужно минимум 2 точки', 'warning');
+                return;
+            }
+            
+            if (currentTool === 'measure') return;
+            
+            const obj = {
+                type: currentTool,
+                points: [...currentPoints],
+                id: Date.now() + Math.random(),
+                createdAt: new Date().toISOString(),
+                segments: []
+            };
+            
+            for (let i = 0; i < obj.points.length - 1; i++) {
+                const lengthPx = distance(obj.points[i], obj.points[i + 1]);
+                obj.segments.push({
+                    lengthPixels: lengthPx,
+                    lengthMeters: lengthPx * scale,
+                    start: obj.points[i],
+                    end: obj.points[i + 1]
+                });
+            }
+            
+            obj.totalLengthMeters = obj.segments.reduce((sum, seg) => sum + seg.lengthMeters, 0);
+            obj.totalLengthPixels = obj.segments.reduce((sum, seg) => sum + seg.lengthPixels, 0);
+            
+            markedObjects.push(obj);
+            updateObjectsList();
+            
+            showStatus(`Добавлен ${getToolName(currentTool)}: ${obj.totalLengthMeters.toFixed(2)} м`, 'success');
+            
+            currentPoints = [];
+            document.getElementById('pointsCount').textContent = `Точек: 0`;
+            
+            draw();
+            updateStatistics();
+        }
+        
+        function testCoordinatesMode() {
+            testMode = !testMode;
+            
+            if (testMode) {
+                showStatus('Режим теста: кликните на чертеже. Красный крестик должен появиться точно под курсором.', 'info');
+                currentPoints = [];
+                isCalibrating = false;
+            } else {
+                showStatus('Режим теста отключен', 'info');
+            }
+            
+            draw();
+        }
+        
+        function drawTestCross(x, y) {
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x - 15, y);
+            ctx.lineTo(x + 15, y);
+            ctx.moveTo(x, y - 15);
+            ctx.lineTo(x, y + 15);
+            ctx.stroke();
+            
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'red';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(`(${x.toFixed(0)}, ${y.toFixed(0)})`, x + 20, y - 10);
+            
+            showStatus(`Тест: клик на (${x.toFixed(0)}, ${y.toFixed(0)})`, 'success');
+        }
+        
+        // ========== ФУНКЦИЯ СОХРАНЕНИЯ РАЗМЕТКИ В БД ==========
+        
+        function saveMarkup() {
+            if (markedObjects.length === 0) {
+                showStatus('Нет объектов для сохранения', 'warning');
+                return;
+            }
+            
+            const projectId = document.getElementById('projectId').value;
+            const pageNum = document.getElementById('pageNum').value;
+            
+            const markup = {
+                project_id: projectId,
+                page_num: parseInt(pageNum),
+                scale: scale,
+                zoom: zoom,
+                offset: { x: offsetX, y: offsetY },
+                calibration: {
+                    points: calibrationPoints,
+                    scale: scale,
+                    units: 'meters'
+                },
+                objects: markedObjects,
+                measurements: measurements,
+                created_at: new Date().toISOString(),
+                total_objects: markedObjects.length,
+                version: 'smet4ik-v2.0-fixed-zoom'
+            };
+            
+            try {
+                // 1. Сохраняем в localStorage
+                localStorage.setItem(`smet4ik_markup_${projectId}_${pageNum}`, JSON.stringify(markup));
+                
+                // 2. Сохраняем в БД через API
+                showStatus('Сохранение в БД...', 'info');
+                
+                fetch('/api/markup/save/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(markup)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showStatus(`✅ Разметка сохранена в БД (ID: ${data.markup_id})`, 'success');
+                        console.log('Сохранено в БД:', data);
+                        
+                        // 3. Также экспортируем в JSON файл (как было раньше)
+                        exportToJSON();
+                    } else {
+                        showStatus(`❌ Ошибка сохранения в БД: ${data.message}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    showStatus(`❌ Ошибка сети при сохранении в БД: ${error.message}`, 'error');
+                    // Если API не работает, все равно экспортируем в файл
+                    exportToJSON();
+                });
+                
+            } catch (error) {
+                showStatus(`❌ Ошибка сохранения: ${error.message}`, 'error');
+            }
+        }
+        
+        // ========== ОСТАЛЬНЫЕ ФУНКЦИИ ==========
+        
+        function updateObjectsList() {
+            const list = document.getElementById('objectsList');
+            list.innerHTML = '';
+            
+            markedObjects.forEach((obj, index) => {
+                const div = document.createElement('div');
+                div.className = `object-item ${obj.type}`;
+                
+                div.innerHTML = `
+                    <div class="object-info">
+                        <div>
+                            <strong>${getToolName(obj.type)} ${index + 1}</strong><br>
+                            <small>${obj.points.length} точек | ${obj.totalLengthMeters.toFixed(2)} м</small>
+                        </div>
+                        <button class="delete-btn" onclick="deleteObject(${index})" title="Удалить">×</button>
+                    </div>
+                `;
+                
+                list.appendChild(div);
+            });
+            
+            document.getElementById('totalObjects').textContent = markedObjects.length;
+        }
+        
+        function updateStatistics() {
+            const walls = markedObjects.filter(obj => obj.type === 'wall');
+            const windows = markedObjects.filter(obj => obj.type === 'window');
+            const doors = markedObjects.filter(obj => obj.type === 'door');
+            
+            document.getElementById('wallsCount').textContent = walls.length;
+            document.getElementById('windowsCount').textContent = windows.length;
+            document.getElementById('doorsCount').textContent = doors.length;
+            
+            const totalWallsLength = walls.reduce((sum, wall) => sum + wall.totalLengthMeters, 0);
+            document.getElementById('totalLength').textContent = totalWallsLength.toFixed(1);
+        }
+        
+        function deleteObject(index) {
+            if (confirm('Удалить этот объект?')) {
+                markedObjects.splice(index, 1);
+                updateObjectsList();
+                draw();
+                updateStatistics();
+                showStatus('Объект удален', 'info');
+            }
+        }
+        
+        function toggleGrid() {
+            showGrid = !showGrid;
+            draw();
+            showStatus(showGrid ? 'Сетка включена' : 'Сетка выключена', 'info');
+        }
+        
+        function exportToJSON() {
+            const projectId = document.getElementById('projectId').value;
+            const pageNum = document.getElementById('pageNum').value;
+            
+            const data = {
+                project_id: projectId,
+                page_num: parseInt(pageNum),
+                scale: scale,
+                viewport: {
+                    zoom: zoom,
+                    offset_x: offsetX,
+                    offset_y: offsetY
+                },
+                image_dimensions: {
+                    width_px: canvas.width,
+                    height_px: canvas.height
+                },
+                objects: markedObjects.map(obj => ({
+                    type: obj.type,
+                    points: obj.points,
+                    segments: obj.segments,
+                    total_length_m: obj.totalLengthMeters,
+                    total_length_px: obj.totalLengthPixels
+                })),
+                measurements: measurements,
+                metadata: {
+                    created_at: new Date().toISOString(),
+                    total_objects: markedObjects.length,
+                    total_walls_length_m: markedObjects
+                        .filter(obj => obj.type === 'wall')
+                        .reduce((sum, wall) => sum + wall.totalLengthMeters, 0),
+                    tool: "Smet4ik AI Trainer v2.0 with fixed zoom"
+                }
+            };
+            
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `smet4ik_markup_${projectId}_p${pageNum}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showStatus(`Разметка экспортирована в JSON`, 'success');
+        }
+        
+        function clearAll() {
+            if (markedObjects.length === 0 && currentPoints.length === 0 && measurements.length === 0) return;
+            
+            if (confirm('Очистить всю разметку и измерения?')) {
+                markedObjects = [];
+                currentPoints = [];
+                measurements = [];
+                selectedObject = null;
+                testMode = false;
+                
+                updateObjectsList();
+                draw();
+                updateStatistics();
+                
+                document.getElementById('pointsCount').textContent = `Точек: 0`;
+                showStatus('Вся разметка очищена', 'info');
+            }
+        }
+        
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            
+            const colors = {
+                'info': '#2196F3',
+                'success': '#4CAF50',
+                'warning': '#FF9800',
+                'error': '#F44336'
+            };
+            
+            statusEl.style.color = colors[type] || '#333';
+        }
+        
+        function toggleCalibration() {
+            isCalibrating = !isCalibrating;
+            testMode = false;
+            
+            const panel = document.getElementById('calibrationPanel');
+            
+            if (isCalibrating) {
+                panel.style.display = 'block';
+                calibrationPoints = [];
+                document.getElementById('calPoint1').value = 'Не выбрана';
+                document.getElementById('calPoint2').value = 'Не выбрана';
+                document.getElementById('calResult').value = 'Ожидание...';
+                showStatus('Режим калибровки: кликните на начало известного размера', 'info');
+            } else {
+                panel.style.display = 'none';
+                showStatus('Режим калибровки отключен', 'info');
+            }
+            
+            draw();
+        }
+        
+        function cancelCalibration() {
+            isCalibrating = false;
+            document.getElementById('calibrationPanel').style.display = 'none';
+            calibrationPoints = [];
+            draw();
+            showStatus('Калибровка отменена', 'info');
+        }
+        
+        function applyCalibration() {
+            if (calibrationPoints.length !== 2) {
+                showStatus('Нужно выбрать две точки для калибровки', 'warning');
+                return;
+            }
+            
+            const realLength = parseFloat(document.getElementById('realLength').value);
+            if (!realLength || realLength <= 0) {
+                showStatus('Введите корректную длину в метрах', 'warning');
+                return;
+            }
+            
+            const p1 = calibrationPoints[0];
+            const p2 = calibrationPoints[1];
+            const pixelLength = distance(p1, p2);
+            
+            scale = realLength / pixelLength;
+            
+            document.getElementById('currentScale').value = `1px = ${scale.toFixed(6)}м`;
+            document.getElementById('scaleRatio').textContent = `1 пиксель = ${scale.toFixed(4)} метров`;
+            document.getElementById('calResult').value = `Масштаб: 1px = ${scale.toFixed(6)}м`;
+            document.getElementById('calibrationStatus').textContent = `Масштаб: 1:${Math.round(1/scale)}`;
+            
+            measurements.push({
+                x1: p1.x, y1: p1.y,
+                x2: p2.x, y2: p2.y,
+                lengthMeters: realLength,
+                pixelLength: pixelLength,
+                scale: scale
+            });
+            
+            showStatus(`Масштаб установлен: 1 пиксель = ${scale.toFixed(4)} метров`, 'success');
+            
+            recalculateAllObjects();
+            
+            isCalibrating = false;
+            document.getElementById('calibrationPanel').style.display = 'none';
+            calibrationPoints = [];
+            
+            draw();
+            updateStatistics();
+        }
+        
+        function autoEstimateScale() {
+            const typicalWallLength = 3.5;
+            const typicalPixelsForWall = 350;
+            
+            scale = typicalWallLength / typicalPixelsForWall;
+            
+            document.getElementById('currentScale').value = `Авто: 1px ≈ ${scale.toFixed(6)}м`;
+            document.getElementById('scaleRatio').textContent = `1 пиксель ≈ ${scale.toFixed(4)} метров`;
+            document.getElementById('calibrationStatus').textContent = `Масштаб: Авто 1:${Math.round(1/scale)}`;
+            
+            showStatus('Автоматически установлен примерный масштаб. Для точности выполните калибровку.', 'info');
+        }
+        
+        function handleCalibrationClick(x, y) {
+            if (calibrationPoints.length < 2) {
+                calibrationPoints.push({x: x, y: y});
+                
+                if (calibrationPoints.length === 1) {
+                    document.getElementById('calPoint1').value = `(${x.toFixed(0)}, ${y.toFixed(0)})`;
+                    showStatus('Теперь кликните на конец отрезка с известным размером', 'info');
+                } else if (calibrationPoints.length === 2) {
+                    document.getElementById('calPoint2').value = `(${x.toFixed(0)}, ${y.toFixed(0)})`;
+                    
+                    const pixelLength = distance(calibrationPoints[0], calibrationPoints[1]);
+                    document.getElementById('realLength').value = (pixelLength * 0.01).toFixed(2);
+                    
+                    showStatus('Введите реальную длину отрезка в метрах', 'info');
+                }
+                
+                draw();
+            }
+        }
+        
+        function recalculateAllObjects() {
+            markedObjects.forEach(obj => {
+                obj.segments = [];
+                for (let i = 0; i < obj.points.length - 1; i++) {
+                    const lengthPx = distance(obj.points[i], obj.points[i + 1]);
+                    obj.segments.push({
+                        lengthPixels: lengthPx,
+                        lengthMeters: lengthPx * scale,
+                        start: obj.points[i],
+                        end: obj.points[i + 1]
+                    });
+                }
+                obj.totalLengthMeters = obj.segments.reduce((sum, seg) => sum + seg.lengthMeters, 0);
+                obj.totalLengthPixels = obj.segments.reduce((sum, seg) => sum + seg.lengthPixels, 0);
+            });
+            
+            updateObjectsList();
+            updateStatistics();
+        }
+        
+        // Горячие клавиши
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                completeCurrentObject();
+                e.preventDefault();
+            } else if (e.key === 'Escape') {
+                currentPoints = [];
+                testMode = false;
+                draw();
+                document.getElementById('pointsCount').textContent = `Точек: 0`;
+                showStatus('Текущая разметка отменена', 'info');
+            } else if (e.key === 'w' || e.key === 'ц') {
+                selectTool('wall');
+            } else if (e.key === 'o' || e.key === 'щ') {
+                selectTool('window');
+            } else if (e.key === 'd' || e.key === 'в') {
+                selectTool('door');
+            } else if (e.key === 'm' || e.key === 'ь') {
+                selectTool('measure');
+            } else if (e.key === 't' || e.key === 'е') {
+                testCoordinatesMode();
+            } else if (e.key === 's' || e.key === 'ы') {
+                selectTool('select');
+            } else if (e.key === 'g' || e.key === 'п') {
+                toggleGrid();
+            } else if (e.key === 'c' || e.key === 'с') {
+                toggleCalibration();
+            } else if (e.key === '+' || e.key === '=') {
+                zoomIn();
+                e.preventDefault();
+            } else if (e.key === '-' || e.key === '_') {
+                zoomOut();
+                e.preventDefault();
+            } else if (e.key === '0' || e.key === 'Home') {
+                resetZoom();
+            } else if (e.key === 'Delete') {
+                if (selectedObject) {
+                    const index = markedObjects.indexOf(selectedObject);
+                    if (index !== -1) deleteObject(index);
+                }
+            }
+        });
+        
+        // Инициализация
+        function init() {
+            selectTool('wall');
+            updateStatistics();
+            
+            const lastProject = localStorage.getItem('smet4ik_last_project');
+            if (lastProject) {
+                document.getElementById('projectId').value = lastProject;
+            }
+            
+            showStatus('Тренажер готов. Загрузите чертеж. Теперь разметки автоматически сохраняются в БД!', 'info');
+        }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
